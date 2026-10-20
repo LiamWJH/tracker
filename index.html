@@ -1,23 +1,14 @@
+<!--https://liamwjh.github.io/tracker/-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Web App</title>
+  <title>app shit</title>
   <!-- Load Supabase Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
-    input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-    .chat-box { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
-    .message { margin-bottom: 8px; }
-    .user { font-weight: bold; color: #0070f3; }
-  </style>
 </head>
 <body>
-
-  <h2>Live App</h2>
-
   <!-- Auth Section -->
   <div id="auth-section">
     <h3>Sign Up / Log In</h3>
@@ -41,13 +32,13 @@
     const SUPABASE_URL = "https://nenaahvtgahlrezlaoxy.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_5VXg-3Yf_vC64K8WbUHF0A_A8XFlIcN";
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 2. Authentication
     async function signUp() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await db.auth.signUp({ email, password });
       if (error) alert(error.message);
       else alert("Check your email for confirmation or try logging in!");
     }
@@ -55,18 +46,18 @@
     async function logIn() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await db.auth.signInWithPassword({ email, password });
       if (error) alert(error.message);
       else checkUser();
     }
 
     async function logOut() {
-      await supabase.auth.signOut();
+      await db.auth.signOut();
       checkUser();
     }
 
     async function checkUser() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await db.auth.getUser();
       if (user) {
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('app-section').style.display = 'block';
@@ -81,7 +72,7 @@
 
     // 3. Database & Realtime Functions
     async function loadMessages() {
-      const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
+      const { data, error } = await db.from('messages').select('*').order('created_at', { ascending: true });
       if (error) console.error(error);
       else {
         const box = document.getElementById('chat-box');
@@ -92,10 +83,10 @@
 
     async function sendMessage() {
       const input = document.getElementById('message-input');
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await db.auth.getUser();
       if (!input.value.trim() || !user) return;
 
-      const { error } = await supabase.from('messages').insert({
+      const { error } = await db.from('messages').insert({
         user_email: user.email,
         content: input.value
       });
