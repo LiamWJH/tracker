@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Web App</title>
+  <!-- Load Supabase Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    .chat-box { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+    .message { margin-bottom: 8px; }
+    .user { font-weight: bold; color: #0070f3; }
+  </style>
+</head>
+<body>
+
+  <h2>Live App</h2>
+
+  <!-- Auth Section -->
+  <div id="auth-section">
+    <h3>Sign Up / Log In</h3>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="logIn()">Log In</button>
+  </div>
+
+  <!-- Main App Section -->
+  <div id="app-section" style="display: none;">
+    <p>Welcome, <span id="user-display"></span>! <button onclick="logOut()" style="width: auto;">Log Out</button></p>
+
+    <div class="chat-box" id="chat-box"></div>
+    <input type="text" id="message-input" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send Message</button>
+  </div>
+
+  <script>
+    // 1. Replace with your actual Supabase URL and Anon Key from Step 1
+    const SUPABASE_URL = "https://nenaahvtgahlrezlaoxy.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_5VXg-3Yf_vC64K8WbUHF0A_A8XFlIcN";
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. Authentication
+    async function signUp() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) alert(error.message);
+      else alert("Check your email for confirmation or try logging in!");
+    }
+
+    async function logIn() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+      else checkUser();
+    }
+
+    async function logOut() {
+      await supabase.auth.signOut();
+      checkUser();
+    }
+
+    async function checkUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('app-section').style.display = 'block';
+        document.getElementById('user-display').innerText = user.email;
+        loadMessages();
+        subscribeToMessages();
+      } else {
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('app-section').style.display = 'none';
+      }
+    }
+
+    // 3. Database & Realtime Functions
+    async function loadMessages() {
+      const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
+      if (error) console.error(error);
+      else {
+        const box = document.getElementById('chat-box');
+        box.innerHTML = data.map(m => `<div class="message"><span class="user">${m.user_email}:</span> ${m.content}</div>`).join('');
+        box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('message-input');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!input.value.trim() || !user) return;
+
+      const { error } = await supabase.from('messages').insert({
+        user_email: user.email,
+        content: input.value
+      });
+
+      if (error) alert(error.message);
+      else input.value = '';
+    }
+
+    // Realtime Updates (Listen for new messages)
+    function subscribeToMessages() {
+      supabase
+        .channel('public:messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          loadMessages();
+        })
+        .subscribe();
+    }
+
+    // Check auth status on load
+    checkUser();
+  </script>
+</body>
+</html>
