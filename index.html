@@ -97,7 +97,7 @@
 
     // Realtime Updates (Listen for new messages)
     function subscribeToMessages() {
-      supabase
+      db
         .channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           loadMessages();
